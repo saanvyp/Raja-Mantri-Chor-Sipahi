@@ -90,3 +90,30 @@ const shuffleArr = (arr) => {
     }
     return arr;
 };
+
+app.post('/room/assign/:roomId', (req, res) => {
+    const roomId = req.params.roomId;
+    const room = rooms[roomId];
+
+    if (!room) return res.status(404).send({ message: "Room not found." });
+    if (room.players.length !== 4) return res.status(400).send({ message: "Need exactly 4 players to assign roles." });
+    if (room.status !== 'WAITING') return res.status(400).send({ message: "Roles already assigned or game in progress." });
+
+    const roles = ['Raja', 'Mantri', 'Chor', 'Sipahi'];
+    const shuffledRoles = shuffleArr([...roles]); 
+
+    const roundRoles = {};
+    for (let i = 0; i < room.players.length; i++) {
+        const playerId = room.players[i].id;
+        const role = shuffledRoles[i];
+
+        // assign the role to the player object for this round
+        room.players[i].role = role; 
+        roundRoles[playerId] = role;
+    }
+
+    room.roundRoles = roundRoles;
+    room.status = 'ASSIGNED';
+
+    res.status(200).send({ message: "Roles assigned. Mantri must now guess the Chor." });
+});
