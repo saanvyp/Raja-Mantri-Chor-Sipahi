@@ -148,3 +148,65 @@ app.post('/guess/:roomId', (req, res) => {
     if (room.status !== 'ASSIGNED') {
         return res.status(400).send({ message: "Roles not assigned or results already calculated." });
 }
+
+// check if the submitting player is the mantri
+    const mantriPlayer = room.players.find(p => p.id === mantriId);
+    if (!mantriPlayer || mantriPlayer.role !== 'Mantri') {
+        return res.status(403).send({ message: "Only the Mantri can submit a guess." });
+    }
+
+    // store the guess
+    room.mantriGuess = guessedChorId;
+    
+    // find actual chor
+    const actualChorPlayer = room.players.find(p => p.role === 'Chor');
+    if (!actualChorPlayer) {
+        return res.status(500).send({ message: "Internal error: Chor role not found." });
+    }
+    
+    // determine if the guess was correct
+    const isCorrect = (guessedChorId === actualChorPlayer.id);
+
+    // calc and update scores
+    let roundPoints = {};
+
+    if (isCorrect) {
+        // correct guess: mantri & sipahi keep their points, chor loses.
+        room.players.forEach(p => {
+            const role = p.role;
+            const points = POINTS[role];
+            roundPoints[p.id] = points;
+            p.cumulativeScore += points;
+        });
+        roundPoints.result = "Mantri Guessed Correctly!";
+
+    } else {
+        // incorrect: chor steals mantri's and sipahi's points.
+        const chorStolenPoints = POINTS.Mantri + POINTS.Sipahi;
+
+        room.players.forEach(p => {
+            const role = p.role;
+            let points = POINTS[role];
+            
+            if (role === 'Mantri' || role === 'Sipahi') {
+                points = 0; // mantri and sipahi lose their default points
+            } else if (role === 'Chor') {
+                points = chorStolenPoints; // chor steals the points
+            } 
+            // raja points remain the same
+
+            roundPoints[p.id] = points;
+            p.cumulativeScore += points;
+        });
+        roundPoints.result = "Chor Stole the Points!";
+    }
+
+    room.status = 'GUESSED';
+    room.lastRoundPoints = roundPoints; // Store points for the result endpoint
+
+    res.status(200).send({
+        message: "Guess submitted. Waiting for results reveal.",
+        isCorrect: isCorrect,
+        mantriGuessedId: guessedChorId
+    });
+});
