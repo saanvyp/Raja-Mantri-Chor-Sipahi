@@ -136,3 +136,15 @@ app.get('/role/me/:roomId/:playerId', (req, res) => {
     res.status(200).send({ role: player.role });
 });
 
+// POST /guess/:roomId - submit guessed playerId
+app.post('/guess/:roomId', (req, res) => {
+    const roomId = req.params.roomId;
+    const { mantriId, guessedChorId } = req.body;
+    const room = rooms[roomId];
+
+    if (!room) {
+        return res.status(404).send({ message: "Room not found." });
+    }
+    if (room.status !== 'ASSIGNED') {
+        return res.status(400).send({ message: "Roles not assigned or results already calculated." });
+}
