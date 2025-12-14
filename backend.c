@@ -210,3 +210,40 @@ app.post('/guess/:roomId', (req, res) => {
         mantriGuessedId: guessedChorId
     });
 });
+
+// GET /result/:roomId - All players - Final roles + points for the round
+app.get('/result/:roomId', (req, res) => {
+    const roomId = req.params.roomId;
+    const room = rooms[roomId];
+
+    if (!room) {
+        return res.status(404).send({ message: "Room not found." });
+    }
+    if (room.status !== 'GUESSED') {
+        return res.status(400).send({ message: "Guess not yet submitted." });
+    }
+
+    // full result data
+    const results = room.players.map(p => ({
+        playerId: p.id,
+        playerName: p.name,
+        role: p.role, // reveal the role
+        pointsAwarded: room.lastRoundPoints[p.id] || 0,
+        totalScore: p.cumulativeScore
+    }));
+    
+    const actualChor = room.players.find(p => p.role === 'Chor');
+    const guessedChor = room.players.find(p => p.id === room.mantriGuess);
+    
+    res.status(200).send({
+        roundResult: room.lastRoundPoints.result,
+        mantriGuess: {
+            guessedChorName: guessedChor ? guessedChor.name : "N/A",
+            actualChorName: actualChor.name,
+            wasCorrect: room.mantriGuess === actualChor.id
+        },
+        roundScores: results
+    });
+
+
+});
