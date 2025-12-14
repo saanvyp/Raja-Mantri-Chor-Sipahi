@@ -56,3 +56,28 @@ app.post('/room/create', (req, res) => {
         playerList: [playerName]
     });
 });
+
+// POST /room/join - join existing room
+app.post('/room/join', (req, res) => {
+    const { roomId, playerName } = req.body;
+    const room = rooms[roomId];
+
+    if (!room) {
+        return res.status(404).send({ message: "Room not found." });
+    }
+    if (room.players.length >= 4) {
+        return res.status(403).send({ message: "Room is full. Max 4 players." });
+    }
+
+    const playerId = generateUniqueId();
+    const player = { id: playerId, name: playerName, role: null, cumulativeScore: 0 };
+    room.players.push(player);
+
+    const playerNames = room.players.map(p => p.name);
+
+    res.status(200).send({
+        message: `${playerName} joined successfully. Players in room: ${room.players.length}`,
+        roomId: roomId,
+        playerId: playerId,
+        playerList: playerNames
+    });
