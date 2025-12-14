@@ -117,3 +117,22 @@ app.post('/room/assign/:roomId', (req, res) => {
 
     res.status(200).send({ message: "Roles assigned. Mantri must now guess the Chor." });
 });
+
+// GET /role/me/:roomId/:playerId - see your role only
+app.get('/role/me/:roomId/:playerId', (req, res) => {
+    const { roomId, playerId } = req.params;
+    const room = rooms[roomId];
+
+    if (!room) return res.status(404).send({ message: "Room not found." });
+
+    const player = room.players.find(p => p.id === playerId);
+    if (!player) return res.status(404).send({ message: "Player not found in room." });
+    
+    if (room.status === 'WAITING' || !player.role) {
+        return res.status(200).send({ message: "Roles have not been assigned yet." });
+    }
+
+    // Crucial step: Only reveal the role for the requested player ID
+    res.status(200).send({ role: player.role });
+});
+
